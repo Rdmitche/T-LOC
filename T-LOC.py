@@ -161,7 +161,7 @@ if(not bamR):
         if(resume=="true" and os.path.exists("%s/Reference_%s.sorted.bam.bai" %(REF_path, Sample_name))):
             bamR = "%s/Reference_%s.sorted.bam" % (REF_path,Sample_name) 
         if(not bamR):
-            cmd_bwa1 = "bwa mem -t $threads %s %s > %s/Reference_%s.sam 2> %s/Reference_bwa_%s.txt" % (genome_Bwa, re.sub(","," ", fastq), REF_path,Sample_name,REF_path,Sample_name)
+            cmd_bwa1 = "bwa mem -t {} {} {} > {}/Reference_{}.sam 2> {}/Reference_bwa_{}.txt".format(threads, genome_Bwa, re.sub(",", " ", fastq), REF_path, Sample_name, REF_path, Sample_name)
             bamR = "%s/Reference_%s.sorted.bam" % (REF_path,Sample_name)
             logging.debug(cmd_bwa1)
             os.system(cmd_bwa1)
