@@ -1,5 +1,5 @@
 #!/bin/python
-import getopt,copy,re,os,sys,logging,time,datetime;
+import getopt,copy,re,os,sys,logging,time,datetime,subprocess;
 options, args = getopt.getopt(sys.argv[1:], 'o:',['fastq=','bamR=','bamT=','genome=','TDNA=','genome_Bwa=','TDNA_Bwa=','anchor=','output=','resume=', 'read_min_TDNA=','read_min_REF=','control_bamR=','insert=','control_fastq=', 'control_ID=', 'Mosaic_length=','Sample_name='])
 fastq = ""
 bamR=""
@@ -59,7 +59,7 @@ for opt, arg in options:
         elif opt in ('-o','--output'):
                 output = arg
 run = "true"
-threads=$(nproc)
+threads = int(subprocess.check_output(["nproc"]).strip())
 if(not fastq):
         if( not bamR ):
                 print "Please provide either fastq reads or reference alignment files"
