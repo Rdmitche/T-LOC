@@ -239,7 +239,7 @@ if( not control_ID and control_fastq):
     C_fastq = control_fastq.split(":")
     clipped_controlR = ""
     for i in range(0, len(C_fastq)):
-        cmd_bwa1 = "bwa mem -t $threads %s %s > %s/Reference_control_%s.sam 2> %s/Reference_control_%s_bwa.txt" % (genome_Bwa, re.sub(","," ", C_fastq[i]), Control_path,i+1,Control_path,i+1)
+        cmd_bwa1 = "bwa mem -t {} {} {} > {}/Reference_control_{}.sam 2> {}/Reference_control_{}_bwa.txt".format(threads,genome_Bwa,re.sub(",", " ", C_fastq[i]),Control_path,i + 1,Control_path,i + 1)
         cmd = "samtools view " + Control_path + "/Reference_control_"+  str(i +1) + ".sam" + "|awk '$6~/[S]/' - > " + Control_path + "/Control_clipped_" + str(i+1)+ ".sam"
         logging.debug(cmd_bwa1)
         os.system(cmd_bwa1)
