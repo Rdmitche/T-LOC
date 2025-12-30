@@ -6,6 +6,16 @@ args <- commandArgs(trailingOnly = TRUE)
 ##args[4] = folder to put middle Bam files at mosaic region with flanking 2000bp and coverage data
 ##args[5] = Sample_name
 ##args[6] = bin_path
+
+# Function to clean chromosome names - extract just the accession number
+clean_chr_name <- function(chr_str) {
+  # Handle complex chromosome names like:
+  # "NC_038251.2 Glycine max cultivar Williams 82 chromosome 15, Glycine_max_v4.0, whole genome shotgun sequence"
+  # Extract just the accession (first part before space)
+  parts <- unlist(strsplit(chr_str, " "))
+  return(parts[1])
+}
+
 Sample_name = ""
 if(length(args)>4){
 	Sample_name  = args[5]
@@ -113,24 +123,59 @@ for (num in 1:length(insert_l)){
         dis = abs(id2[1,4]-id1[1,4])
         start =min(id2[1,4],id1[1,4])-dis
         end =max(id2[1,4],id1[1,4])+ dis
-        region1 = paste(id1[1,3],":", start,"-",end,sep="")
-        region2 = paste(id1[1,3],":", start - 2000,"-",end + 2000,sep="")
+        # Clean chromosome name before using it
+        clean_chr = clean_chr_name(as.character(id1[1,3]))
+        region1 = paste(clean_chr,":", start,"-",end,sep="")
+        region2 = paste(clean_chr,":", start - 2000,"-",end + 2000,sep="")
     }
     if(dim(id2)[1]==0 ){
-        region1 = paste(id1[1,3],":", id1[1,4]-nchar(A1[1,2]),"-", id1[1,4]+ nchar(A1[1,2]),sep="")
-        region2 = paste(id1[1,3],":", id1[1,4]-nchar(A1[1,2])- 2000,"-", id1[1,4]+ nchar(A1[1,2])+ 2000,sep="")
+        clean_chr = clean_chr_name(as.character(id1[1,3]))
+        region1 = paste(clean_chr,":", id1[1,4]-nchar(A1[1,2]),"-", id1[1,4]+ nchar(A1[1,2]),sep="")
+        region2 = paste(clean_chr,":", id1[1,4]-nchar(A1[1,2])- 2000,"-", id1[1,4]+ nchar(A1[1,2])+ 2000,sep="")
     }
     if(dim(id1)[1] == 0 ){
-        region1 = paste(id2[1,3],":", id2[1,4]-nchar(A2[1,2]),"-", id2[1,4]+ nchar(A2[1,2]),sep="")
-        region2 = paste(id2[1,3],":", id2[1,4]-nchar(A2[1,2])- 2000,"-", id2[1,4]+ nchar(A2[1,2])+ 2000,sep="")
+        clean_chr = clean_chr_name(as.character(id2[1,3]))
+        region1 = paste(clean_chr,":", id2[1,4]-nchar(A2[1,2]),"-", id2[1,4]+ nchar(A2[1,2]),sep="")
+        region2 = paste(clean_chr,":", id2[1,4]-nchar(A2[1,2])- 2000,"-", id2[1,4]+ nchar(A2[1,2])+ 2000,sep="")
     }
-    cmd1 = paste("samtools view -bhS ", args[2], " ", region2, " -o ",args[4], "/",args[5], "_Mosaic_",num,".bam", sep="")
-    system(cmd1)
-    cmd2 = paste("samtools index ", args[4],"/",args[5], "_Mosaic_",num,".bam",sep="")
-    system(cmd2)
-    cmd3 = paste("python ",args[6], "/Coverage.py --bam ", args[4], "/",args[5], "_Mosaic_",num,".bam", " --Region ", region1 ," --output ", args[4],"/",args[5], "_Mosaic_",num,"_coverage.txt",sep="")
+    
+    # Print debug info
+    cat("Processing region ", num, ": ", region2, "\n")
+    
+    # Check if samtools is available
+    samtools_check <- system("which samtools", intern = FALSE, ignore.stdout = TRUE, ignore.stderr = TRUE)
+    
+    if(samtools_check == 0) {
+        # Use samtools if available
+        cmd1 = paste("samtools view -bhS ", args[2], " ", region2, " -o ",args[4], "/",args[5], "_Mosaic_",num,".bam", sep="")
+        system(cmd1)
+        cmd2 = paste("samtools index ", args[4],"/",args[5], "_Mosaic_",num,".bam",sep="")
+        system(cmd2)
+    } else {
+        cat("Warning: samtools not found, using Python to extract region\n")
+        # Use a Python script to extract the region instead
+        cmd1 = paste("python ", args[6], "/extract_region.py --bam ", args[2], " --region ", region2, " --output ", args[4], "/", args[5], "_Mosaic_", num, ".bam", sep="")
+        result = system(cmd1, intern = FALSE)
+        if(result != 0) {
+            cat("Warning: Could not extract region ", num, "\n")
+        }
+    }
+    
+    # Use the fixed Coverage.py
+    cmd3 = paste("python ",args[6], "/../bin/Coverage_fixed.py --bam ", args[4], "/",args[5], "_Mosaic_",num,".bam", " --Region ", region1 ," --output ", args[4],"/",args[5], "_Mosaic_",num,"_coverage.txt",sep="")
     system(cmd3)
-    cov = read.table(paste(args[4],"/",args[5], "_Mosaic_",num,"_coverage.txt",sep=""))
-    barplot(cov[,2],ylim = c(0, as.integer(max(cov[,2]) * 2/100+1) * 100),las =1,main = Sample_name,names.arg = cov[,1],xlab = gsub(":.*","",region1),ylab = "Read number")
+    
+    # Check if coverage file exists before trying to read it
+    coverage_file = paste(args[4],"/",args[5], "_Mosaic_",num,"_coverage.txt",sep="")
+    if(file.exists(coverage_file)) {
+        cov = read.table(coverage_file)
+        if(nrow(cov) > 0) {
+            barplot(cov[,2],ylim = c(0, as.integer(max(cov[,2]) * 2/100+1) * 100),las =1,main = Sample_name,names.arg = cov[,1],xlab = clean_chr,ylab = "Read number")
+        } else {
+            cat("Warning: Coverage file is empty for region ", num, "\n")
+        }
+    } else {
+        cat("Warning: Coverage file not found for region ", num, "\n")
+    }
 }
 dev.off()
