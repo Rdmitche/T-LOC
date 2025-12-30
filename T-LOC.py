@@ -1,6 +1,6 @@
 #!/bin/python
-import getopt,copy,re,os,sys,logging,time,datetime,subprocess;
-options, args = getopt.getopt(sys.argv[1:], 'o:',['fastq=','bamR=','bamT=','genome=','TDNA=','genome_Bwa=','TDNA_Bwa=','anchor=','output=','resume=', 'read_min_TDNA=','read_min_REF=','control_bamR=','insert=','control_fastq=', 'control_ID=', 'Mosaic_length=','Sample_name='])
+import getopt,copy,re,os,sys,logging,time,datetime;
+options, args = getopt.getopt(sys.argv[1:], 'o:',['fastq=','bamR=','bamT=','genome=','TDNA=','genome_Bwa=','TDNA_Bwa=','anchor=','output=','resume=', 'read_min_TDNA=','read_min_REF=','control_bamR=','insert=','control_fastq=', 'control_ID=', 'Mosaic_length=','Sample_name=','threads='])
 fastq = ""
 bamR=""
 control_bamR=""
@@ -21,6 +21,7 @@ clipped_samR = ""
 clipped_samT = ""
 Mosaic_length = 500
 Sample_name = 'ss'
+threads = "4"
 for opt, arg in options:
         if opt in ('--fastq'):
                 fastq = arg
@@ -54,12 +55,13 @@ for opt, arg in options:
                 Mosaic_length = int(arg)
         elif opt in ('--resume'):
                 resume  = arg
+        elif opt in ('--threads'):
+                threads = arg
         elif opt in ('--Sample_name'):
                 Sample_name  = arg
         elif opt in ('-o','--output'):
                 output = arg
 run = "true"
-threads = int(subprocess.check_output(["nproc"]).strip())
 if(not fastq):
         if( not bamR ):
                 print "Please provide either fastq reads or reference alignment files"
@@ -161,7 +163,7 @@ if(not bamR):
         if(resume=="true" and os.path.exists("%s/Reference_%s.sorted.bam.bai" %(REF_path, Sample_name))):
             bamR = "%s/Reference_%s.sorted.bam" % (REF_path,Sample_name) 
         if(not bamR):
-            cmd_bwa1 = "bwa mem -t {} {} {} > {}/Reference_{}.sam 2> {}/Reference_bwa_{}.txt".format(threads, genome_Bwa, re.sub(",", " ", fastq), REF_path, Sample_name, REF_path, Sample_name)
+            cmd_bwa1 = " bwa mem -t  %s %s > %s/Reference_%s.sam 2> %s/Reference_bwa_%s.txt" % (threads,genome_Bwa, re.sub(","," ", fastq), REF_path,Sample_name,REF_path,Sample_name)
             bamR = "%s/Reference_%s.sorted.bam" % (REF_path,Sample_name)
             logging.debug(cmd_bwa1)
             os.system(cmd_bwa1)
@@ -200,7 +202,7 @@ if(not bamT ):
     if(resume=="true" and os.path.exists("%s/TDNA_%s.sorted.bam.bai" %(TDNA_path, Sample_name))):
             bamT = "%s/TDNA_%s.sorted.bam" % (TDNA_path,Sample_name)
     if(not bamT):
-        cmd_bwa = "bwa mem -t {} {} {} > {}/TDNA_{}.sam 2> {}/TDNA_bwa_{}.txt".format(threads, TDNA_Bwa, re.sub(",", " ", fastq), TDNA_path, Sample_name, TDNA_path, Sample_name)
+        cmd_bwa = "bwa mem -t %s %s > %s/TDNA_%s.sam 2> %s/TDNA_bwa_%s.txt" % (threads,TDNA_Bwa,re.sub(","," ", fastq), TDNA_path,Sample_name,TDNA_path,Sample_name)
         bamT = "%s/TDNA_%s.sorted.bam" % (TDNA_path,Sample_name)
         logging.debug(cmd_bwa)
         os.system(cmd_bwa)
@@ -239,7 +241,7 @@ if( not control_ID and control_fastq):
     C_fastq = control_fastq.split(":")
     clipped_controlR = ""
     for i in range(0, len(C_fastq)):
-        cmd_bwa1 = "bwa mem -t {} {} {} > {}/Reference_control_{}.sam 2> {}/Reference_control_{}_bwa.txt".format(threads,genome_Bwa,re.sub(",", " ", C_fastq[i]),Control_path,i + 1,Control_path,i + 1)
+        cmd_bwa1 = "bwa mem -t %s %s %s > %s/Reference_control_%s.sam 2> %s/Reference_control_%s_bwa.txt" % (threads,genome_Bwa, re.sub(","," ", C_fastq[i]), Control_path,i+1,Control_path,i+1)
         cmd = "samtools view " + Control_path + "/Reference_control_"+  str(i +1) + ".sam" + "|awk '$6~/[S]/' - > " + Control_path + "/Control_clipped_" + str(i+1)+ ".sam"
         logging.debug(cmd_bwa1)
         os.system(cmd_bwa1)
