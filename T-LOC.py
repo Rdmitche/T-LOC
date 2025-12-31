@@ -202,7 +202,7 @@ if(not bamT ):
     if(resume=="true" and os.path.exists("%s/TDNA_%s.sorted.bam.bai" %(TDNA_path, Sample_name))):
             bamT = "%s/TDNA_%s.sorted.bam" % (TDNA_path,Sample_name)
     if(not bamT):
-        cmd_bwa = "bwa mem -t %s %s > %s/TDNA_%s.sam 2> %s/TDNA_bwa_%s.txt" % (threads,TDNA_Bwa,re.sub(","," ", fastq), TDNA_path,Sample_name,TDNA_path,Sample_name)
+        cmd_bwa = "bwa mem -t %s %s %s > %s/TDNA_%s.sam 2> %s/TDNA_bwa_%s.txt" % (threads,TDNA_Bwa,re.sub(","," ", fastq), TDNA_path,Sample_name,TDNA_path,Sample_name)
         bamT = "%s/TDNA_%s.sorted.bam" % (TDNA_path,Sample_name)
         logging.debug(cmd_bwa)
         os.system(cmd_bwa)
