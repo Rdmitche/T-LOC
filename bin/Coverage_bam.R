@@ -162,7 +162,7 @@ for (num in 1:length(insert_l)){
     }
     
     # Use the fixed Coverage.py
-    cmd3 = paste("python ",args[6], "/../bin/Coverage_fixed.py --bam ", args[4], "/",args[5], "_Mosaic_",num,".bam", " --Region ", region1 ," --output ", args[4],"/",args[5], "_Mosaic_",num,"_coverage.txt",sep="")
+    cmd3 = paste("python ",args[6], "/../bin/Coverage.py --bam ", args[4], "/",args[5], "_Mosaic_",num,".bam", " --Region ", region1 ," --output ", args[4],"/",args[5], "_Mosaic_",num,"_coverage.txt",sep="")
     system(cmd3)
     
     # Check if coverage file exists before trying to read it
